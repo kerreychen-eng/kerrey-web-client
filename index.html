@@ -1,0 +1,33 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ACC 竞品截图工具</title>
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+
+    <div id="activation-view" class="container">
+        <h2>软件激活</h2>
+        <p>请输入您的产品密钥以激活工具：</p>
+        <input type="text" id="product-key-input" placeholder="KERREY-XXXX-XXXX">
+        <button id="activate-button">激活</button>
+        <p id="activation-status" class="status"></p>
+    </div>
+
+    <div id="app-view" class="container" style="display: none;">
+        <h2>ACC 竞品截图</h2>
+        <label for="keyword-input">品牌/关键词/ASIN:</label>
+        <input type="text" id="keyword-input">
+        
+        <label for="email-input">接收邮箱:</label>
+        <input type="email" id="email-input" placeholder="me@example.com">
+        
+        <button id="submit-button">提交任务</button>
+        <p id="app-status" class="status"></p>
+    </div>
+
+    <script src="app.js"></script>
+</body>
+</html>
