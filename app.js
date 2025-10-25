@@ -1,4 +1,4 @@
-// app.js (v1.1 - 修复了激活反馈的 Bug)
+// app.js (v1.2 - 修复了激活反馈 + 保存邮箱功能)
 
 // --- 1. 配置 ---
 const LICENSE_SERVER_URL = "https://kerrey-severss.vercel.app/activate";
@@ -33,6 +33,15 @@ document.addEventListener('DOMContentLoaded', () => {
         if (licenseKey) {
             activationView.style.display = 'none';
             appView.style.display = 'block';
+            
+            // --- *** 新增代码 *** ---
+            // 加载时，自动填充上次保存的邮箱
+            const savedEmail = localStorage.getItem('saved_email');
+            if (savedEmail) {
+                emailInput.value = savedEmail;
+            }
+            // --- *** 新增结束 *** ---
+            
         } else {
             activationView.style.display = 'block';
             appView.style.display = 'none';
@@ -64,36 +73,26 @@ document.addEventListener('DOMContentLoaded', () => {
             if (response.ok) {
                 const data = await response.json();
                 localStorage.setItem('license_key', data.license_key);
-                
-                // 成功：显示成功信息并禁用按钮
                 setActivationLoading(false, "✅ 激活成功！", true);
-                
-                setTimeout(checkLicense, 1000); // 1秒后切换视图
+                setTimeout(checkLicense, 1000); 
             } else {
-                // 失败：显示服务器返回的错误信息
                 const errorData = await response.json();
                 showActivationError(errorData.detail || "激活失败，请检查您的密钥。");
             }
 
         } catch (error) {
-            // 失败：显示网络错误
             console.error("激活时发生网络错误:", error);
             showActivationError("激活失败：无法连接到服务器。请检查网络。");
         }
         
-        // --- 修复点 ---
-        // 我们不再使用 finally, 而是将“停止加载”的逻辑
-        // 放入各自的成功/失败分支中。
-        // 只有在“加载中”的状态下才重置按钮
         if (activateButton.disabled) {
-             // 如果状态不是成功 (isSuccess = true), 就重置按钮
              if (!activationStatus.classList.contains('success')) {
                 activateButton.disabled = false;
              }
         }
     });
 
-    // --- 6. 提交任务按钮事件 (已修复) ---
+    // --- 6. 提交任务按钮事件 (已修改) ---
     submitButton.addEventListener('click', async () => {
         const keyword = keywordInput.value.trim();
         const email = emailInput.value.trim();
@@ -124,6 +123,12 @@ document.addEventListener('DOMContentLoaded', () => {
                 showAppStatus("✅ 任务已成功提交！", false);
                 keywordInput.value = ""; 
                 isSuccess = true;
+                
+                // --- *** 新增代码 *** ---
+                // 提交成功后，保存邮箱
+                localStorage.setItem('saved_email', email);
+                // --- *** 新增结束 *** ---
+                
             } else {
                 const errorData = await response.json();
                 showAppStatus(errorData.detail || "提交失败，服务器错误。", true);
@@ -133,10 +138,8 @@ document.addEventListener('DOMContentLoaded', () => {
             console.error("提交任务时发生网络错误:", error);
             showAppStatus("提交失败：无法连接到API服务器。", true);
         } finally {
-            // 无论成功失败，都重置提交按钮
             setSubmitLoading(false);
             if (isSuccess) {
-                 // 成功后延迟清除状态
                 setTimeout(() => {
                     showAppStatus("", false);
                 }, 3000);
@@ -159,7 +162,7 @@ document.addEventListener('DOMContentLoaded', () => {
     function showActivationError(message) {
         activationStatus.textContent = `❌ ${message}`;
         activationStatus.className = 'status error';
-        activateButton.disabled = false; // <-- 修复点：确保按钮在出错时被重新启用
+        activateButton.disabled = false;
     }
 
     function setSubmitLoading(isLoading, message = "") {
@@ -168,7 +171,6 @@ document.addEventListener('DOMContentLoaded', () => {
             appStatus.textContent = message;
             appStatus.className = 'status';
         } else {
-             // 仅停止加载时，不清除消息
              submitButton.disabled = false;
         }
     }
