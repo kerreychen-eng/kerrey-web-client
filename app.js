@@ -1,4 +1,4 @@
-// app.js (v1.2 - 修复了激活反馈 + 保存邮箱功能)
+// app.js (v1.3 - 优化了任务提交的等待提示)
 
 // --- 1. 配置 ---
 const LICENSE_SERVER_URL = "https://kerrey-severss.vercel.app/activate";
@@ -34,13 +34,10 @@ document.addEventListener('DOMContentLoaded', () => {
             activationView.style.display = 'none';
             appView.style.display = 'block';
             
-            // --- *** 新增代码 *** ---
-            // 加载时，自动填充上次保存的邮箱
             const savedEmail = localStorage.getItem('saved_email');
             if (savedEmail) {
                 emailInput.value = savedEmail;
             }
-            // --- *** 新增结束 *** ---
             
         } else {
             activationView.style.display = 'block';
@@ -48,7 +45,7 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     }
 
-    // --- 5. 激活按钮事件 (已修复) ---
+    // --- 5. 激活按钮事件 ---
     activateButton.addEventListener('click', async () => {
         const productKey = keyInput.value.trim();
         if (!productKey) {
@@ -106,7 +103,12 @@ document.addEventListener('DOMContentLoaded', () => {
             return;
         }
 
-        setSubmitLoading(true, "正在提交任务...");
+        // --- *** 核心修改点 *** ---
+        // 使用更详细的提示，管理用户预期
+        const loadingMessage = "正在提交... 首次提交可能耗时约1分钟，请耐心等待。";
+        setSubmitLoading(true, loadingMessage);
+        // --- *** 修改结束 *** ---
+        
         let isSuccess = false;
 
         try {
@@ -123,11 +125,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 showAppStatus("✅ 任务已成功提交！", false);
                 keywordInput.value = ""; 
                 isSuccess = true;
-                
-                // --- *** 新增代码 *** ---
-                // 提交成功后，保存邮箱
                 localStorage.setItem('saved_email', email);
-                // --- *** 新增结束 *** ---
                 
             } else {
                 const errorData = await response.json();
@@ -147,7 +145,7 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     });
 
-    // --- 7. UI 状态辅助函数 (已修改) ---
+    // --- 7. UI 状态辅助函数 ---
     
     function setActivationLoading(isLoading, message = "", isSuccess = false) {
         activateButton.disabled = isLoading;
