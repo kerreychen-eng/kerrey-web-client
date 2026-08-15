@@ -1,183 +1,369 @@
-// app.js (v1.3 - 优化了任务提交的等待提示)
-
-// --- 1. 配置 ---
-const LICENSE_SERVER_URL = "https://kerrey-severss.vercel.app/activate";
+const LICENSE_SERVER_URL = "https://kerrey-severss.vercel.app";
 const API_ENDPOINT = "https://kerrey-api-vercel.vercel.app/submit_task";
 
-// --- 2. 辅助函数：获取唯一的浏览器ID ---
+const storageKeys = {
+    browserId: "browser_id",
+    licenseToken: "license_key",
+    licenseMetadata: "license_metadata",
+    savedEmail: "saved_email",
+    pendingRequestId: "pending_request_id",
+    pendingRequestPayload: "pending_request_payload",
+};
+
 function getBrowserId() {
-    let browserId = localStorage.getItem('browser_id');
+    let browserId = localStorage.getItem(storageKeys.browserId);
     if (!browserId) {
-        browserId = crypto.randomUUID(); 
-        localStorage.setItem('browser_id', browserId);
+        browserId = crypto.randomUUID();
+        localStorage.setItem(storageKeys.browserId, browserId);
     }
     return browserId;
 }
 
-// --- 3. DOM 元素获取 ---
-document.addEventListener('DOMContentLoaded', () => {
-    
-    const activationView = document.getElementById('activation-view');
-    const appView = document.getElementById('app-view');
-    const keyInput = document.getElementById('product-key-input');
-    const activateButton = document.getElementById('activate-button');
-    const activationStatus = document.getElementById('activation-status');
-    const keywordInput = document.getElementById('keyword-input');
-    const emailInput = document.getElementById('email-input');
-    const submitButton = document.getElementById('submit-button');
-    const appStatus = document.getElementById('app-status');
+function getPendingRequestId(payloadSignature) {
+    let requestId = sessionStorage.getItem(storageKeys.pendingRequestId);
+    const savedPayload = sessionStorage.getItem(storageKeys.pendingRequestPayload);
+    if (!requestId || savedPayload !== payloadSignature) {
+        requestId = crypto.randomUUID();
+        sessionStorage.setItem(storageKeys.pendingRequestId, requestId);
+        sessionStorage.setItem(storageKeys.pendingRequestPayload, payloadSignature);
+    }
+    return requestId;
+}
 
-    // --- 4. 核心逻辑：检查激活状态 ---
-    function checkLicense() {
-        const licenseKey = localStorage.getItem('license_key');
-        if (licenseKey) {
-            activationView.style.display = 'none';
-            appView.style.display = 'block';
-            
-            const savedEmail = localStorage.getItem('saved_email');
-            if (savedEmail) {
-                emailInput.value = savedEmail;
-            }
-            
-        } else {
-            activationView.style.display = 'block';
-            appView.style.display = 'none';
+function clearPendingRequestId() {
+    sessionStorage.removeItem(storageKeys.pendingRequestId);
+    sessionStorage.removeItem(storageKeys.pendingRequestPayload);
+}
+
+async function responseError(response, fallback) {
+    try {
+        const payload = await response.json();
+        return payload.detail || fallback;
+    } catch {
+        return fallback;
+    }
+}
+
+function readCachedLicenseMetadata() {
+    try {
+        const value = localStorage.getItem(storageKeys.licenseMetadata);
+        return value ? JSON.parse(value) : null;
+    } catch {
+        localStorage.removeItem(storageKeys.licenseMetadata);
+        return null;
+    }
+}
+
+function cacheLicenseMetadata(data) {
+    if (data?.license_type !== "FULL" && data?.license_type !== "TRIAL") {
+        return;
+    }
+    localStorage.setItem(
+        storageKeys.licenseMetadata,
+        JSON.stringify({
+            license_type: data.license_type,
+            remaining_tasks: data.remaining_tasks,
+        }),
+    );
+}
+
+function clearStoredLicense() {
+    localStorage.removeItem(storageKeys.licenseToken);
+    localStorage.removeItem(storageKeys.licenseMetadata);
+}
+
+document.addEventListener("DOMContentLoaded", () => {
+    const activationView = document.getElementById("activation-view");
+    const appView = document.getElementById("app-view");
+    const keyInput = document.getElementById("product-key-input");
+    const activateButton = document.getElementById("activate-button");
+    const activationStatus = document.getElementById("activation-status");
+    const keywordInput = document.getElementById("keyword-input");
+    const emailInput = document.getElementById("email-input");
+    const levantaEnabledInput = document.getElementById("levanta-enabled");
+    const affiliateLimitInput = document.getElementById("affiliate-limit");
+    const submitButton = document.getElementById("submit-button");
+    const appStatus = document.getElementById("app-status");
+    const licenseSummary = document.getElementById("license-summary");
+    const licenseTypeLabel = document.getElementById("license-type-label");
+    const licenseQuotaLabel = document.getElementById("license-quota-label");
+    const changeLicenseButton = document.getElementById("change-license-button");
+    let quotaExhausted = false;
+
+    function showActivationView(message = "") {
+        activationView.style.display = "block";
+        appView.style.display = "none";
+        activationStatus.textContent = message;
+        activationStatus.className = message ? "status error" : "status";
+    }
+
+    function showAppView() {
+        activationView.style.display = "none";
+        appView.style.display = "block";
+        const savedEmail = localStorage.getItem(storageKeys.savedEmail);
+        if (savedEmail) {
+            emailInput.value = savedEmail;
         }
     }
 
-    // --- 5. 激活按钮事件 ---
-    activateButton.addEventListener('click', async () => {
+    function updateLicenseSummary(data) {
+        if (data?.license_type !== "FULL" && data?.license_type !== "TRIAL") {
+            return;
+        }
+
+        const isTrial = data.license_type === "TRIAL";
+        licenseSummary.hidden = false;
+        licenseSummary.classList.toggle("trial", isTrial);
+        licenseTypeLabel.textContent = isTrial ? "试用名额卡" : "正式卡";
+        if (isTrial) {
+            const parsedRemaining = Number(data.remaining_tasks);
+            const remaining = Number.isFinite(parsedRemaining)
+                ? Math.max(parsedRemaining, 0)
+                : 0;
+            quotaExhausted = remaining === 0;
+            licenseQuotaLabel.textContent = `剩余 ${remaining} 次`;
+            submitButton.disabled = quotaExhausted;
+            if (quotaExhausted) {
+                showAppStatus("试用名额已用完，请更换卡密。", true);
+            }
+        } else {
+            quotaExhausted = false;
+            licenseQuotaLabel.textContent = "不限次数";
+            submitButton.disabled = false;
+        }
+        cacheLicenseMetadata(data);
+    }
+
+    function showLicenseStatusUnavailable(message) {
+        const cachedMetadata = readCachedLicenseMetadata();
+        if (cachedMetadata) {
+            updateLicenseSummary(cachedMetadata);
+        } else {
+            licenseSummary.hidden = false;
+            licenseSummary.classList.remove("trial");
+            licenseTypeLabel.textContent = "已激活";
+            licenseQuotaLabel.textContent = "状态待同步";
+        }
+        showAppStatus(message, true);
+    }
+
+    function fetchLicenseStatus(licenseToken) {
+        return fetch(`${LICENSE_SERVER_URL}/status`, {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ license_token: licenseToken }),
+        });
+    }
+
+    async function handleTaskAuthorizationError(message, licenseToken) {
+        try {
+            const statusResponse = await fetchLicenseStatus(licenseToken);
+            if (statusResponse.status === 401) {
+                clearStoredLicense();
+                clearPendingRequestId();
+                showActivationView(
+                    await responseError(statusResponse, "授权已失效，请重新激活。"),
+                );
+                return;
+            }
+            if (statusResponse.ok) {
+                updateLicenseSummary(await statusResponse.json());
+            }
+        } catch (error) {
+            console.error("提交后复核授权失败", error);
+        }
+
+        // The task API can also return 401 when its own service credential is
+        // unavailable. Keep the user's valid token and allow a later retry.
+        showAppStatus(message || "任务服务暂未能确认授权，请稍后重试。", true);
+    }
+
+    async function validateStoredLicense() {
+        const licenseToken = localStorage.getItem(storageKeys.licenseToken);
+        if (!licenseToken) {
+            showActivationView();
+            return;
+        }
+
+        // A saved token is enough to enter the app. Only an explicit 401 from
+        // the license service proves it is invalid; rollout gaps and temporary
+        // service failures must not be presented as "no ACC".
+        showAppView();
+        const cachedMetadata = readCachedLicenseMetadata();
+        if (cachedMetadata) {
+            updateLicenseSummary(cachedMetadata);
+        }
+
+        try {
+            const response = await fetchLicenseStatus(licenseToken);
+            if (!response.ok) {
+                if (response.status === 401) {
+                    clearStoredLicense();
+                    clearPendingRequestId();
+                    showActivationView(await responseError(response, "授权已失效，请重新激活。"));
+                    return;
+                }
+                showLicenseStatusUnavailable("授权状态暂时无法同步，仍可提交任务验证。");
+                return;
+            }
+            const data = await response.json();
+            updateLicenseSummary(data);
+            showAppStatus("", false);
+        } catch (error) {
+            console.error("校验授权失败", error);
+            showLicenseStatusUnavailable("授权状态暂时无法同步，仍可提交任务验证。");
+        }
+    }
+
+    activateButton.addEventListener("click", async () => {
         const productKey = keyInput.value.trim();
         if (!productKey) {
-            showActivationError("密钥不能为空！");
+            showActivationError("卡密不能为空。");
             return;
         }
 
         setActivationLoading(true, "正在激活，请稍候...");
-
         try {
-            const machineId = getBrowserId(); 
-            
-            const response = await fetch(LICENSE_SERVER_URL, {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
+            const response = await fetch(`${LICENSE_SERVER_URL}/activate`, {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
                 body: JSON.stringify({
                     product_key: productKey,
-                    machine_id: machineId 
+                    machine_id: getBrowserId(),
                 }),
             });
-
-            if (response.ok) {
-                const data = await response.json();
-                localStorage.setItem('license_key', data.license_key);
-                setActivationLoading(false, "✅ 激活成功！", true);
-                setTimeout(checkLicense, 1000); 
-            } else {
-                const errorData = await response.json();
-                showActivationError(errorData.detail || "激活失败，请检查您的密钥。");
+            if (!response.ok) {
+                showActivationError(await responseError(response, "激活失败，请检查卡密。"));
+                return;
             }
 
+            const data = await response.json();
+            clearPendingRequestId();
+            localStorage.setItem(storageKeys.licenseToken, data.license_key);
+            keyInput.value = "";
+            setActivationLoading(false, "激活成功。", true);
+            showAppView();
+            updateLicenseSummary(data);
         } catch (error) {
-            console.error("激活时发生网络错误:", error);
-            showActivationError("激活失败：无法连接到服务器。请检查网络。");
-        }
-        
-        if (activateButton.disabled) {
-             if (!activationStatus.classList.contains('success')) {
-                activateButton.disabled = false;
-             }
+            console.error("激活网络错误", error);
+            showActivationError("激活失败：无法连接到授权服务器。");
         }
     });
 
-    // --- 6. 提交任务按钮事件 (已修改) ---
-    submitButton.addEventListener('click', async () => {
+    submitButton.addEventListener("click", async () => {
         const keyword = keywordInput.value.trim();
         const email = emailInput.value.trim();
+        const licenseToken = localStorage.getItem(storageKeys.licenseToken);
+        const levantaEnabled = Boolean(levantaEnabledInput?.checked);
+        const parsedLimit = Number.parseInt(affiliateLimitInput?.value || "50", 10);
+        const maxProducts = Number.isFinite(parsedLimit)
+            ? Math.min(Math.max(parsedLimit, 1), 50)
+            : 50;
+        const providers = levantaEnabled ? ["acc", "levanta"] : ["acc"];
 
         if (!keyword || !email) {
             showAppStatus("关键词和邮箱不能为空。", true);
             return;
         }
-        if (!email.includes('@') || !email.includes('.')) {
+        if (!email.includes("@") || !email.includes(".")) {
             showAppStatus("请输入有效的邮箱格式。", true);
             return;
         }
+        if (!licenseToken) {
+            showActivationView("请先激活卡密。");
+            return;
+        }
 
-        // --- *** 核心修改点 *** ---
-        // 使用更详细的提示，管理用户预期
-        const loadingMessage = "正在提交... 首次提交可能耗时约1分钟，请耐心等待。";
-        setSubmitLoading(true, loadingMessage);
-        // --- *** 修改结束 *** ---
-        
+        setSubmitLoading(true, "正在提交... 首次提交可能耗时约1分钟，请耐心等待。");
         let isSuccess = false;
-
         try {
             const response = await fetch(API_ENDPOINT, {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
+                method: "POST",
+                headers: {
+                    "Content-Type": "application/json",
+                    "Authorization": `Bearer ${licenseToken}`,
+                },
                 body: JSON.stringify({
-                    keyword: keyword,
-                    email: email
+                    keyword,
+                    email,
+                    providers,
+                    max_products: maxProducts,
+                    request_id: getPendingRequestId(
+                        JSON.stringify({ keyword, email, providers, max_products: maxProducts }),
+                    ),
                 }),
             });
 
-            if (response.ok) {
-                showAppStatus("✅ 任务已成功提交！", false);
-                keywordInput.value = ""; 
-                isSuccess = true;
-                localStorage.setItem('saved_email', email);
-                
-            } else {
-                const errorData = await response.json();
-                showAppStatus(errorData.detail || "提交失败，服务器错误。", true);
+            if (!response.ok) {
+                const message = await responseError(response, "提交失败，服务器错误。");
+                if (response.status === 401) {
+                    await handleTaskAuthorizationError(message, licenseToken);
+                } else {
+                    if (message.includes("试用名额已用完")) {
+                        updateLicenseSummary({
+                            license_type: "TRIAL",
+                            remaining_tasks: 0,
+                        });
+                        clearPendingRequestId();
+                    }
+                    showAppStatus(message, true);
+                }
+                return;
             }
 
+            const data = await response.json();
+            clearPendingRequestId();
+            keywordInput.value = "";
+            localStorage.setItem(storageKeys.savedEmail, email);
+            updateLicenseSummary(data);
+            const isPendingConfirmation = data.reservation_status === "publishing";
+            showAppStatus(
+                isPendingConfirmation ? "任务已受理，状态确认中。" : "任务已成功提交。",
+                false,
+            );
+            isSuccess = true;
         } catch (error) {
-            console.error("提交任务时发生网络错误:", error);
-            showAppStatus("提交失败：无法连接到API服务器。", true);
+            console.error("提交任务网络错误", error);
+            showAppStatus("提交状态未知，请勿更换关键词，稍后重试。", true);
         } finally {
             setSubmitLoading(false);
             if (isSuccess) {
-                setTimeout(() => {
-                    showAppStatus("", false);
-                }, 3000);
+                setTimeout(() => showAppStatus("", false), 3000);
             }
         }
     });
 
-    // --- 7. UI 状态辅助函数 ---
-    
+    changeLicenseButton.addEventListener("click", () => {
+        clearStoredLicense();
+        clearPendingRequestId();
+        showActivationView();
+        keyInput.focus();
+    });
+
     function setActivationLoading(isLoading, message = "", isSuccess = false) {
         activateButton.disabled = isLoading;
         activationStatus.textContent = message;
-        if (isSuccess) {
-            activationStatus.className = 'status success';
-        } else {
-             activationStatus.className = 'status';
-        }
+        activationStatus.className = isSuccess ? "status success" : "status";
     }
-    
+
     function showActivationError(message) {
-        activationStatus.textContent = `❌ ${message}`;
-        activationStatus.className = 'status error';
+        activationStatus.textContent = message;
+        activationStatus.className = "status error";
         activateButton.disabled = false;
     }
 
     function setSubmitLoading(isLoading, message = "") {
-        submitButton.disabled = isLoading;
+        submitButton.disabled = isLoading || quotaExhausted;
         if (isLoading) {
             appStatus.textContent = message;
-            appStatus.className = 'status';
-        } else {
-             submitButton.disabled = false;
+            appStatus.className = "status";
         }
     }
 
     function showAppStatus(message, isError = false) {
         appStatus.textContent = message;
-        appStatus.className = isError ? 'status error' : 'status success';
+        appStatus.className = isError ? "status error" : "status success";
     }
 
-    // --- 8. 启动 ---
-    checkLicense();
+    validateStoredLicense();
 });
