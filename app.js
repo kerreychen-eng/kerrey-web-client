@@ -81,7 +81,6 @@ document.addEventListener("DOMContentLoaded", () => {
     const keywordInput = document.getElementById("keyword-input");
     const emailInput = document.getElementById("email-input");
     const levantaEnabledInput = document.getElementById("levanta-enabled");
-    const affiliateLimitInput = document.getElementById("affiliate-limit");
     const submitButton = document.getElementById("submit-button");
     const appStatus = document.getElementById("app-status");
     const licenseSummary = document.getElementById("license-summary");
@@ -255,10 +254,7 @@ document.addEventListener("DOMContentLoaded", () => {
         const email = emailInput.value.trim();
         const licenseToken = localStorage.getItem(storageKeys.licenseToken);
         const levantaEnabled = Boolean(levantaEnabledInput?.checked);
-        const parsedLimit = Number.parseInt(affiliateLimitInput?.value || "50", 10);
-        const maxProducts = Number.isFinite(parsedLimit)
-            ? Math.min(Math.max(parsedLimit, 1), 50)
-            : 50;
+        const maxProducts = 50;
         const providers = levantaEnabled ? ["acc", "levanta"] : ["acc"];
 
         if (!keyword || !email) {
