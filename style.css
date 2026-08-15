@@ -50,6 +50,52 @@ input[type="email"]:focus {
     outline: none;
 }
 
+.source-options {
+    display: grid;
+    gap: 8px;
+    margin: 16px 0;
+    padding: 12px;
+    border: 1px solid #5A5B5C;
+    border-radius: 6px;
+    text-align: left;
+}
+
+.source-options legend {
+    padding: 0 4px;
+    color: #E0E0E0;
+    font-size: 13px;
+}
+
+.source-options label {
+    margin: 0;
+}
+
+.checkbox-label {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.checkbox-label input {
+    width: auto;
+    margin: 0;
+}
+
+.source-options input[type="number"] {
+    width: calc(100% - 20px);
+    background-color: #2E2F30;
+    border: 1px solid #5A5B5C;
+    border-radius: 4px;
+    padding: 10px;
+    color: #F0F0F0;
+    font-size: 14px;
+}
+
+.source-options small {
+    color: #A7A7A7;
+    line-height: 1.45;
+}
+
 button {
     width: 100%;
     background-color: #0078D7;
@@ -84,4 +130,41 @@ button:disabled {
 }
 .status.error {
     color: #F44336; /* 红色 */
+}
+
+.license-summary {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    min-height: 42px;
+    margin: 0 0 16px;
+    padding: 0 12px;
+    border: 1px solid #4E6B82;
+    border-radius: 4px;
+    background: #293640;
+    color: #DDEAF3;
+    font-size: 14px;
+}
+
+.license-summary[hidden] {
+    display: none;
+}
+
+.license-summary.trial {
+    border-color: #8A7135;
+    background: #403922;
+    color: #FFF0BD;
+}
+
+.text-button {
+    margin-top: 8px;
+    padding: 8px;
+    background: transparent;
+    color: #AFC7D9;
+    font-size: 13px;
+    font-weight: normal;
+}
+
+.text-button:hover {
+    background: #343536;
 }
