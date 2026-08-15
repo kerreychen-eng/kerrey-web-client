@@ -81,21 +81,6 @@ input[type="email"]:focus {
     margin: 0;
 }
 
-.source-options input[type="number"] {
-    width: calc(100% - 20px);
-    background-color: #2E2F30;
-    border: 1px solid #5A5B5C;
-    border-radius: 4px;
-    padding: 10px;
-    color: #F0F0F0;
-    font-size: 14px;
-}
-
-.source-options small {
-    color: #A7A7A7;
-    line-height: 1.45;
-}
-
 button {
     width: 100%;
     background-color: #0078D7;
