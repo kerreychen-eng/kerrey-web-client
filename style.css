@@ -20,6 +20,31 @@ body {
     box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
 }
 
+.app-header {
+    margin-bottom: 24px;
+    text-align: center;
+}
+
+.eyebrow {
+    margin: 0 0 8px;
+    color: #8fc5ef;
+    font-size: 12px;
+    font-weight: 700;
+    letter-spacing: 0.12em;
+}
+
+.app-header h1 {
+    margin: 0;
+    color: #FFFFFF;
+    font-size: 26px;
+}
+
+.subtitle {
+    margin: 8px 0 0;
+    color: #BFC6CC;
+    font-size: 14px;
+}
+
 h2 {
     color: #FFFFFF;
     text-align: center;
@@ -110,6 +135,13 @@ button:disabled {
     text-align: center;
     font-size: 14px;
 }
+
+.field-note {
+    margin: 8px 0 0;
+    color: #AEB7BE;
+    font-size: 12px;
+    line-height: 1.6;
+}
 .status.success {
     color: #4CAF50; /* 绿色 */
 }
@@ -152,4 +184,25 @@ button:disabled {
 
 .text-button:hover {
     background: #343536;
+}
+
+.app-footer {
+    margin-top: 20px;
+    text-align: center;
+}
+
+.app-footer a {
+    color: #AFC7D9;
+    font-size: 12px;
+}
+
+.app-footer a:hover {
+    color: #DDEAF3;
+}
+
+@media (max-width: 480px) {
+    .container {
+        width: calc(100% - 32px);
+        padding: 20px;
+    }
 }
