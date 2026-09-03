@@ -3,21 +3,30 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>ACC 竞品截图工具</title>
+    <meta name="description" content="Kerrey ACC 官方任务提交页面，用于提交竞品关键词并接收截图结果。">
+    <meta name="robots" content="noindex, nofollow">
+    <title>Kerrey ACC 官方任务提交</title>
     <link rel="stylesheet" href="style.css">
 </head>
 <body>
 
-    <div id="activation-view" class="container">
-        <h2>软件激活</h2>
+    <main class="container app-shell">
+      <header class="app-header">
+        <p class="eyebrow">KERREY 官方工具</p>
+        <h1>ACC 竞品截图</h1>
+        <p class="subtitle">安全提交任务，结果发送到你的邮箱</p>
+      </header>
+
+      <section id="activation-view" aria-labelledby="activation-title">
+        <h2 id="activation-title">激活使用权限</h2>
         <p>请输入正式卡密或试用名额卡密：</p>
         <input type="text" id="product-key-input" placeholder="KERREY-XXXX-XXXX" autocomplete="off">
-        <button id="activate-button">激活</button>
+        <button id="activate-button" type="button">激活</button>
         <p id="activation-status" class="status"></p>
-    </div>
+      </section>
 
-    <div id="app-view" class="container" style="display: none;">
-        <h2>ACC 竞品截图</h2>
+      <section id="app-view" style="display: none;" aria-labelledby="task-title">
+        <h2 id="task-title">提交截图任务</h2>
         <div id="license-summary" class="license-summary" hidden>
             <span id="license-type-label"></span>
             <strong id="license-quota-label"></strong>
@@ -27,6 +36,7 @@
         
         <label for="email-input">接收邮箱:</label>
         <input type="email" id="email-input" placeholder="me@example.com">
+        <p class="field-note">邮箱仅用于发送本次任务结果。不会要求 Google、Amazon、银行卡或其他账号密码，也不会自动下载软件。</p>
 
         <fieldset class="source-options">
             <legend>增加数据来源</legend>
@@ -36,10 +46,15 @@
             </label>
         </fieldset>
 
-        <button id="submit-button">提交任务</button>
+        <button id="submit-button" type="button">提交任务</button>
         <p id="app-status" class="status"></p>
         <button id="change-license-button" class="text-button" type="button">更换卡密</button>
-    </div>
+      </section>
+
+      <footer class="app-footer">
+        <a href="privacy.html">隐私与数据使用说明</a>
+      </footer>
+    </main>
 
     <script src="app.js"></script>
 </body>
