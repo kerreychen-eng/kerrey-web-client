@@ -1,5 +1,8 @@
-const LICENSE_SERVER_URL = "https://kerrey-severss.vercel.app";
-const API_ENDPOINT = "https://kerrey-api-vercel.vercel.app/submit_task";
+// Requests stay on the official site origin. Vercel rewrites these paths to
+// the private service deployments, avoiding cross-site form submission and
+// keeping the browser's security boundary simple.
+const LICENSE_SERVER_URL = "/api/license";
+const API_ENDPOINT = "/api/task";
 
 const storageKeys = {
     browserId: "browser_id",
@@ -99,7 +102,7 @@ document.addEventListener("DOMContentLoaded", () => {
     function showAppView() {
         activationView.style.display = "none";
         appView.style.display = "block";
-        const savedEmail = localStorage.getItem(storageKeys.savedEmail);
+        const savedEmail = sessionStorage.getItem(storageKeys.savedEmail);
         if (savedEmail) {
             emailInput.value = savedEmail;
         }
@@ -310,7 +313,7 @@ document.addEventListener("DOMContentLoaded", () => {
             const data = await response.json();
             clearPendingRequestId();
             keywordInput.value = "";
-            localStorage.setItem(storageKeys.savedEmail, email);
+            sessionStorage.setItem(storageKeys.savedEmail, email);
             updateLicenseSummary(data);
             const isPendingConfirmation = data.reservation_status === "publishing";
             showAppStatus(
